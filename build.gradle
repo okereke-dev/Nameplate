@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.11-SNAPSHOT'
+	id 'fabric-loom' version '1.17.16'
 	id 'maven-publish'
 }
 
@@ -11,6 +11,12 @@ base {
 }
 
 repositories {
+	// Some upstream mavens (terraformersmc, shedaniel) intermittently
+	// truncate HTTP/2 chunked downloads in this environment (confirmed via
+	// curl: --http1.1 succeeds, plain https fails at a random byte offset
+	// each time). Any artifact that hits this gets manually re-downloaded
+	// with --http1.1 and seeded here so Gradle finds it locally first.
+	mavenLocal()
 	maven { url "https://maven.shedaniel.me/" }
 	maven { url "https://maven.terraformersmc.com/" }
 	maven { url 'https://jitpack.io' }
@@ -22,7 +28,7 @@ repositories {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 

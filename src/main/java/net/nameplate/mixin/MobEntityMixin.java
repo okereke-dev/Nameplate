@@ -5,15 +5,14 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.world.World;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.Level;
 import net.nameplate.NameplateMain;
 import net.nameplate.access.MobEntityAccess;
 
-@Mixin(MobEntity.class)
+@Mixin(Mob.class)
 public class MobEntityMixin implements MobEntityAccess {
 
     @Unique
@@ -22,20 +21,20 @@ public class MobEntityMixin implements MobEntityAccess {
     private boolean showMobRpgLabel = true;
 
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void initMixin(EntityType<? extends MobEntity> entityType, World world, CallbackInfo info) {
-        if (NameplateMain.CONFIG.excludedEntities.contains(((MobEntity) (Object) this).getType().toString().replace("entity.", "").replace(".", ":"))) {
+    private void initMixin(EntityType<? extends Mob> entityType, Level world, CallbackInfo info) {
+        if (NameplateMain.CONFIG.excludedEntities.contains(((Mob) (Object) this).getType().toString().replace("entity.", "").replace(".", ":"))) {
             this.showMobRpgLabel = false;
         }
     }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
-    private void writeCustomDataToNbtMixin(NbtCompound nbt, CallbackInfo info) {
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
+    private void writeCustomDataToNbtMixin(CompoundTag nbt, CallbackInfo info) {
         nbt.putInt("MobRpgLevel", this.mobRpgLevel);
         nbt.putBoolean("HasMobRpgLabel", this.showMobRpgLabel);
     }
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
-    private void readCustomDataFromNbtMixin(NbtCompound nbt, CallbackInfo info) {
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+    private void readCustomDataFromNbtMixin(CompoundTag nbt, CallbackInfo info) {
         this.mobRpgLevel = nbt.getInt("MobRpgLevel");
         this.showMobRpgLabel = nbt.contains("HasMobRpgLabel") ? nbt.getBoolean("HasMobRpgLabel") : true;
     }

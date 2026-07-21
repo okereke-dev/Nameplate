@@ -15,13 +15,13 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
 import net.nameplate.NameplateMain;
 import net.nameplate.network.packet.TitlePacket;
 
@@ -35,8 +35,8 @@ public class TitleRenderManagerMixin {
     public TitleRenderer<Biome> biomeTitleRenderer;
 
     @Inject(method = "updateBiomeTitle", at = @At(value = "INVOKE", target = "Lcom/yungnickyoung/minecraft/travelerstitles/render/TitleRenderer;addRecentEntry(Ljava/lang/Object;)V"), locals = LocalCapture.CAPTURE_FAILSOFT, remap = false)
-    private void updateBiomeTitleMixin(World world, BlockPos playerPos, PlayerEntity player, boolean isPlayerUnderground, CallbackInfo info, RegistryEntry<?> biomeHolder, boolean isUndergroundBiome,
-            Identifier biomeBaseKey, String overrideBiomeNameKey, String normalBiomeNameKey, Text biomeTitle) {
+    private void updateBiomeTitleMixin(Level world, BlockPos playerPos, Player player, boolean isPlayerUnderground, CallbackInfo info, Holder<?> biomeHolder, boolean isUndergroundBiome,
+            ResourceLocation biomeBaseKey, String overrideBiomeNameKey, String normalBiomeNameKey, Component biomeTitle) {
         if (NameplateMain.CONFIG.levelTitle) {
             ClientPlayNetworking.send(new TitlePacket(0));
         }

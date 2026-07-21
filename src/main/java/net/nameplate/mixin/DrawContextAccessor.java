@@ -2,20 +2,19 @@ package net.nameplate.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
-
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 
 @Environment(EnvType.CLIENT)
-@Mixin(DrawContext.class)
+@Mixin(GuiGraphics.class)
 public interface DrawContextAccessor {
 
     @Invoker("<init>")
-    static DrawContext getDrawContext(MinecraftClient client, MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers) {
+    static GuiGraphics getDrawContext(Minecraft client, PoseStack matrices, MultiBufferSource.BufferSource vertexConsumers) {
         throw new AssertionError();
     }
 

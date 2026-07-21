@@ -1,18 +1,18 @@
 package net.nameplate.util;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Mob;
 import net.nameplate.NameplateMain;
 import net.nameplate.access.MobEntityAccess;
 import net.nameplate.mixin.DrawContextAccessor;
@@ -21,22 +21,22 @@ import org.joml.Matrix4f;
 @Environment(EnvType.CLIENT)
 public class NameplateRender {
 
-    private static final Identifier ICONS = Identifier.of("nameplate:textures/icons.png");
+    private static final ResourceLocation ICONS = ResourceLocation.parse("nameplate:textures/icons.png");
 
-    public static void renderNameplate(EntityRenderer<?> entityRenderer, MobEntity mobEntity, MatrixStack matrices, VertexConsumerProvider vertexConsumers, EntityRenderDispatcher dispatcher,
-                                       TextRenderer textRenderer, boolean isVisible, int i) {
-        if (MinecraftClient.isHudEnabled() && NameplateMain.CONFIG.showLevel && dispatcher.getSquaredDistanceToCamera(mobEntity) <= NameplateMain.CONFIG.squaredDistance && !mobEntity.hasPassengers())
+    public static void renderNameplate(EntityRenderer<?> entityRenderer, Mob mobEntity, PoseStack matrices, MultiBufferSource vertexConsumers, EntityRenderDispatcher dispatcher,
+                                       Font textRenderer, boolean isVisible, int i) {
+        if (Minecraft.renderNames() && NameplateMain.CONFIG.showLevel && dispatcher.distanceToSqr(mobEntity) <= NameplateMain.CONFIG.squaredDistance && !mobEntity.isVehicle())
             if (isVisible && ((MobEntityAccess) mobEntity).showMobRpgLabel()) {
-                if (!NameplateMain.CONFIG.showNameplateIfObstructed && !MinecraftClient.getInstance().player.canSee(mobEntity)) {
+                if (!NameplateMain.CONFIG.showNameplateIfObstructed && !Minecraft.getInstance().player.hasLineOfSight(mobEntity)) {
                     return;
                 }
-                matrices.push();
-                matrices.translate(0.0D, (double) mobEntity.getHeight() + NameplateMain.CONFIG.nameplateHeight, 0.0D);
-                matrices.multiply(dispatcher.getRotation());
+                matrices.pushPose();
+                matrices.translate(0.0D, (double) mobEntity.getBbHeight() + NameplateMain.CONFIG.nameplateHeight, 0.0D);
+                matrices.mulPose(dispatcher.cameraOrientation());
                 matrices.scale(-NameplateMain.CONFIG.nameplateSize, NameplateMain.CONFIG.nameplateSize, -0.025F);
 
                 if (NameplateMain.CONFIG.healthBar) {
-                    matrices.push();
+                    matrices.pushPose();
                     matrices.scale(1.5f, 1.5f, 1f);
 
                     RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -48,37 +48,37 @@ public class NameplateRender {
                     RenderSystem.enablePolygonOffset();
                     RenderSystem.polygonOffset(3.0F, 3.0F);
 
-                    MinecraftClient client = MinecraftClient.getInstance();
-                    DrawContext context = DrawContextAccessor.getDrawContext(client, matrices, client.getBufferBuilders().getEntityVertexConsumers());
-                    context.drawTexture(ICONS, -20, 0, 0, 0, 40, 6, 256, 256);
+                    Minecraft client = Minecraft.getInstance();
+                    GuiGraphics context = DrawContextAccessor.getDrawContext(client, matrices, client.renderBuffers().bufferSource());
+                    context.blit(ICONS, -20, 0, 0, 0, 40, 6, 256, 256);
                     float health = mobEntity.getHealth() / mobEntity.getMaxHealth();
                     matrices.translate(0.0D, 0.0D, -0.01D);
-                    context.drawTexture(ICONS, -20, 0, 0, 6, Math.round(40 * health), 6, 256, 256);
+                    context.blit(ICONS, -20, 0, 0, 6, Math.round(40 * health), 6, 256, 256);
                     RenderSystem.polygonOffset(0.0F, 0.0F);
                     RenderSystem.disablePolygonOffset();
 
-                    matrices.pop();
+                    matrices.popPose();
                     matrices.translate(0.0D, -9D, 0.0D);
                     RenderSystem.disableBlend();
 
                     RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                 }
 
-                Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-                float o = dispatcher.gameOptions.getTextBackgroundOpacity(NameplateMain.CONFIG.backgroundOpacity);
+                Matrix4f matrix4f = matrices.last().pose();
+                float o = dispatcher.options.getBackgroundOpacity(NameplateMain.CONFIG.backgroundOpacity);
                 int j = (int) (o * 255.0F) << 24;
                 String string = mobEntity.hasCustomName() ? mobEntity.getCustomName().getString() : mobEntity.getName().getString();
                 if (NameplateMain.CONFIG.showHealth) {
-                    string = string + " " + Text.translatable("text.nameplate.health", Math.round(mobEntity.getHealth()), Math.round(mobEntity.getMaxHealth())).getString();
+                    string = string + " " + Component.translatable("text.nameplate.health", Math.round(mobEntity.getHealth()), Math.round(mobEntity.getMaxHealth())).getString();
                 }
-                String levelString = Text.translatable("text.nameplate.level", ((MobEntityAccess) mobEntity).getMobRpgLevel()).getString();
-                string = levelString + " " + Text.translatable("text.nameplate.name", string).getString();
-                Text text = Text.of(string);
+                String levelString = Component.translatable("text.nameplate.level", ((MobEntityAccess) mobEntity).getMobRpgLevel()).getString();
+                string = levelString + " " + Component.translatable("text.nameplate.name", string).getString();
+                Component text = Component.nullToEmpty(string);
 
-                float h = (float) (-textRenderer.getWidth(text) / 2);
-                textRenderer.draw(text, h, 0.0F, NameplateMain.CONFIG.nameColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.SEE_THROUGH, j, i);
-                textRenderer.draw(text, h, 0.0F, NameplateMain.CONFIG.backgroundColor, false, matrix4f, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, i);
-                matrices.pop();
+                float h = (float) (-textRenderer.width(text) / 2);
+                textRenderer.drawInBatch(text, h, 0.0F, NameplateMain.CONFIG.nameColor, false, matrix4f, vertexConsumers, Font.DisplayMode.SEE_THROUGH, j, i);
+                textRenderer.drawInBatch(text, h, 0.0F, NameplateMain.CONFIG.backgroundColor, false, matrix4f, vertexConsumers, Font.DisplayMode.NORMAL, 0, i);
+                matrices.popPose();
             }
     }
 }

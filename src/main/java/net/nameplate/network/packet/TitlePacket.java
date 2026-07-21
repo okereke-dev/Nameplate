@@ -1,20 +1,20 @@
 package net.nameplate.network.packet;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-public record TitlePacket(int level) implements CustomPayload {
+public record TitlePacket(int level) implements CustomPacketPayload {
 
-    public static final CustomPayload.Id<TitlePacket> PACKET_ID = new CustomPayload.Id<>(Identifier.of("nameplate", "title_packet"));
+    public static final CustomPacketPayload.Type<TitlePacket> PACKET_ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("nameplate", "title_packet"));
 
-    public static final PacketCodec<RegistryByteBuf, TitlePacket> PACKET_CODEC = PacketCodec.of((value, buf) -> {
+    public static final StreamCodec<RegistryFriendlyByteBuf, TitlePacket> PACKET_CODEC = StreamCodec.ofMember((value, buf) -> {
         buf.writeInt(value.level);
     }, buf -> new TitlePacket(buf.readInt()));
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return PACKET_ID;
     }
 
