@@ -1,8 +1,8 @@
 package net.nameplate.util;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.mixin.object.builder.DefaultAttributeRegistryAccessor;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.nameplate.NameplateMain;
@@ -26,9 +26,17 @@ public class NameplateTracker {
         int level = 1;
         if (NameplateMain.isRpgDifficultyLoaded && NameplateMain.CONFIG.useRpgDifficultyLvl) {
             level = (int) (NameplateMain.CONFIG.levelMultiplier * ((EntityAccess) mobEntity).getMobHealthMultiplier() - NameplateMain.CONFIG.levelMultiplier);
-        } else if (DefaultAttributeRegistryAccessor.getRegistry().get(mobEntity.getType()) != null) {
-            level = (int) (NameplateMain.CONFIG.levelMultiplier * mobEntity.getAttributeBaseValue(Attributes.MAX_HEALTH)
-                    / Math.abs(DefaultAttributeRegistryAccessor.getRegistry().get(mobEntity.getType()).getBaseValue(Attributes.MAX_HEALTH))) - NameplateMain.CONFIG.levelMultiplier + 1;
+        } else {
+            // Entity#getType() is declared EntityType<?> (unbounded) even on
+            // Mob, so this needs an unchecked cast — safe: a Mob's own
+            // EntityType always constructs Mob-or-subtype instances.
+            @SuppressWarnings("unchecked")
+            net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity> mobType =
+                    (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>) mobEntity.getType();
+            if (DefaultAttributes.hasSupplier(mobType)) {
+                level = (int) (NameplateMain.CONFIG.levelMultiplier * mobEntity.getAttributeBaseValue(Attributes.MAX_HEALTH)
+                        / Math.abs(DefaultAttributes.getSupplier(mobType).getBaseValue(Attributes.MAX_HEALTH))) - NameplateMain.CONFIG.levelMultiplier + 1;
+            }
         }
         if (level < 1) {
             level = 1;

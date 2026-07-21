@@ -35,8 +35,8 @@ public class MobEntityMixin implements MobEntityAccess {
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     private void readCustomDataFromNbtMixin(CompoundTag nbt, CallbackInfo info) {
-        this.mobRpgLevel = nbt.getInt("MobRpgLevel");
-        this.showMobRpgLabel = nbt.contains("HasMobRpgLabel") ? nbt.getBoolean("HasMobRpgLabel") : true;
+        this.mobRpgLevel = nbt.getIntOr("MobRpgLevel", 1);
+        this.showMobRpgLabel = nbt.getBooleanOr("HasMobRpgLabel", true);
     }
 
     @Override

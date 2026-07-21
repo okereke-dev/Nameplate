@@ -1,5 +1,7 @@
 plugins {
-	id 'fabric-loom' version '1.17.16'
+	// 26.x is unobfuscated: use the new plugin id, which skips all
+	// remapping (there's nothing to remap to/from anymore).
+	id 'net.fabricmc.fabric-loom' version '1.17.16'
 	id 'maven-publish'
 }
 
@@ -19,43 +21,35 @@ repositories {
 	mavenLocal()
 	maven { url "https://maven.shedaniel.me/" }
 	maven { url "https://maven.terraformersmc.com/" }
-	maven { url 'https://jitpack.io' }
-	maven { url "https://maven2.bai.lol" }
-	maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
-	maven { url "https://www.cursemaven.com" }
 	maven { url "https://api.modrinth.com/maven" }
 }
 
 dependencies {
+	// No mappings block at all: 26.x ships with real names already, there's
+	// nothing to map. "mod*" configurations also stop meaning anything
+	// special once there's no remapping step, so they're plain
+	// implementation/compileOnly/runtimeOnly below.
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// Cloth
-    modImplementation("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
-        exclude(group: "net.fabricmc.fabric-api")
-    }
-    // ModMenu
-    modCompileOnly modRuntimeOnly("com.terraformersmc:modmenu:${project.mod_menu_version}") {
-        exclude(group: "net.fabricmc.fabric-api")
-    }
-	// RpgDifficulty
-	modCompileOnly ('maven.modrinth:rpgdifficulty:1.3.17+1.21.1'){
+	implementation("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
-	// Wthit
-    modCompileOnly ("mcp.mobius.waila:wthit-api:fabric-${wthit_version}")
-	// GeckoLib
-	modImplementation "software.bernie.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}"
-	// Jade
-	modCompileOnly ('maven.modrinth:jade:15.2.1+fabric') {
+	// ModMenu
+	compileOnly runtimeOnly("com.terraformersmc:modmenu:${project.mod_menu_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
-	// TTF
-	modCompileOnly ('maven.modrinth:travelers-titles:1.20.4-Fabric-4.4.1') {
+	// RpgDifficulty — compileOnly stub against the old 1.21.1 artifact for
+	// now; rewired to our own ported 26.2 build once that's done (see
+	// NameplateTracker's use of net.rpgdifficulty.access.EntityAccess).
+	compileOnly ('maven.modrinth:rpgdifficulty:1.3.17+1.21.1'){
 		exclude(group: "net.fabricmc.fabric-api")
 	}
+	// GeckoLib/Jade/WTHIT/original-"Traveler's Titles" compat code was
+	// removed in this port (see NameplateMixinPlugin) — none of those mods
+	// have a 26.x build, and our pack doesn't install any of them anyway.
 }
 
 processResources {
@@ -67,14 +61,14 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 25
 }
 
 java {
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {

@@ -7,8 +7,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
-import net.fabricmc.loader.api.FabricLoader;
-
 public class NameplateMixinPlugin implements IMixinConfigPlugin {
 
     @Override
@@ -22,11 +20,10 @@ public class NameplateMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if ((mixinClassName.contains("GeoEntityRendererMixin") || mixinClassName.contains("GeoReplacedEntityRendererMixin")) && !FabricLoader.getInstance().isModLoaded("geckolib"))
-            return false;
-        if (mixinClassName.contains("TitleRenderManagerMixin") && !FabricLoader.getInstance().isModLoaded("travelerstitles"))
-            return false;
-
+        // GeckoLib/Jade/WAILA/original-Traveler's-Titles compat mixins were
+        // dropped in the 26.2 port (none of those mods have a 26.x build
+        // yet, and their old artifacts don't compile against our mapping-
+        // less setup) — nothing left to conditionally gate here.
         return true;
     }
 
