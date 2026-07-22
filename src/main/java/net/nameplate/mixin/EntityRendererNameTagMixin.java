@@ -7,11 +7,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.nameplate.NameplateMain;
 import net.nameplate.access.MobEntityAccess;
 
@@ -24,11 +30,16 @@ import net.nameplate.access.MobEntityAccess;
 // thread) phases. EntityRenderer#extractNameTags(Entity, EntityRenderState,
 // float, double, double) is the single, final (non-overridable) choke point
 // where state.nameTag gets set from getNameTag(), gated on shouldShowName().
-// Rather than fight shouldShowName() (which MobRenderer overrides with an
-// extra AND-condition that a base-class mixin can't reach), we do what the
-// original did: bypass the gate entirely by overwriting state.nameTag
-// directly after vanilla's own logic has already run. Vanilla's unmodified
-// submitNameDisplay() then just draws whatever's in that field.
+// We bypass that gate the same way the original did, by overwriting
+// state.nameTag directly after vanilla's own logic has already run.
+//
+// Vanilla only computes state.nameTagAttachment (the Vec3 the text actually
+// draws at) inside that SAME gated branch - when the gate is false (the
+// normal case for any unnamed mob), nameTag gets set to null but
+// nameTagAttachment is left untouched, i.e. null/stale. Overwriting nameTag
+// alone therefore produces a label with nowhere valid to draw - silently
+// nothing renders. Recompute nameTagAttachment ourselves the same way
+// vanilla does, unconditionally, whenever we override nameTag.
 @Environment(EnvType.CLIENT)
 @Mixin(EntityRenderer.class)
 public class EntityRendererNameTagMixin {
@@ -42,10 +53,24 @@ public class EntityRendererNameTagMixin {
         if (state.distanceToCameraSq > NameplateMain.CONFIG.squaredDistance) {
             return;
         }
+        Vec3 attachment = entity.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, entity.getYRot(partialTick));
+        if (attachment == null) {
+            return;
+        }
+        if (!NameplateMain.CONFIG.showNameplateIfObstructed && isObstructed(entity, attachment)) {
+            return;
+        }
         MobEntityAccess access = (MobEntityAccess) mob;
         Component baseName = mob.hasCustomName() ? mob.getCustomName() : mob.getDisplayName();
         Component levelText = Component.translatable("text.nameplate.level", access.getMobRpgLevel());
         state.nameTag = levelText.copy().append(" ").append(baseName);
+        state.nameTagAttachment = attachment;
+    }
+
+    private static boolean isObstructed(Entity entity, Vec3 attachment) {
+        Vec3 camPos = Minecraft.getInstance().gameRenderer.mainCamera().position();
+        BlockHitResult hit = entity.level().clip(new ClipContext(camPos, attachment, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, entity));
+        return hit.getType() == HitResult.Type.BLOCK;
     }
 
     private static Mob eligibleMob(Entity entity) {
