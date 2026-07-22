@@ -5,10 +5,11 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.nameplate.NameplateMain;
 import net.nameplate.access.MobEntityAccess;
 
@@ -28,13 +29,13 @@ public class MobEntityMixin implements MobEntityAccess {
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
-    private void writeCustomDataToNbtMixin(CompoundTag nbt, CallbackInfo info) {
+    private void writeCustomDataToNbtMixin(ValueOutput nbt, CallbackInfo info) {
         nbt.putInt("MobRpgLevel", this.mobRpgLevel);
         nbt.putBoolean("HasMobRpgLabel", this.showMobRpgLabel);
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
-    private void readCustomDataFromNbtMixin(CompoundTag nbt, CallbackInfo info) {
+    private void readCustomDataFromNbtMixin(ValueInput nbt, CallbackInfo info) {
         this.mobRpgLevel = nbt.getIntOr("MobRpgLevel", 1);
         this.showMobRpgLabel = nbt.getBooleanOr("HasMobRpgLabel", true);
     }
