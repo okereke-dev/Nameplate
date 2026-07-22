@@ -22,27 +22,57 @@ import net.nameplate.access.MobEntityAccess;
 // own name-tag submission (EntityRenderer#submitNameDisplay), which already
 // handles scale/position/visibility correctly and will keep working across
 // future rendering-pipeline churn.
+//
+// Vanilla only calls getNameTag() at all if shouldShowName() already said
+// yes, and vanilla's own shouldShowName() is true only for players or
+// entities with a custom name (item name tag) being looked at — an ordinary
+// unnamed mob never passes that gate. So we also have to force the gate open
+// ourselves for mobs we want to label, and fall back to the entity type's
+// default display name (e.g. "Cow") when vanilla's own getNameTag() is null.
 @Environment(EnvType.CLIENT)
 @Mixin(EntityRenderer.class)
 public class EntityRendererNameTagMixin {
 
-    @Inject(method = "getNameTag", at = @At("RETURN"), cancellable = true)
-    private void nameplateAppendLevel(Entity entity, CallbackInfoReturnable<Component> cir) {
-        if (!NameplateMain.CONFIG.showLevel) {
+    @Inject(method = "shouldShowName", at = @At("RETURN"), cancellable = true)
+    private void nameplateForceShowName(Entity entity, double distanceToCameraSq, CallbackInfoReturnable<Boolean> cir) {
+        if (cir.getReturnValue()) {
             return;
         }
-        if (!(entity instanceof Mob mob) || mob.isVehicle()) {
+        if (eligibleMob(entity) == null) {
+            return;
+        }
+        if (distanceToCameraSq > NameplateMain.CONFIG.squaredDistance) {
+            return;
+        }
+        cir.setReturnValue(true);
+    }
+
+    @Inject(method = "getNameTag", at = @At("RETURN"), cancellable = true)
+    private void nameplateAppendLevel(Entity entity, CallbackInfoReturnable<Component> cir) {
+        Mob mob = eligibleMob(entity);
+        if (mob == null) {
             return;
         }
         MobEntityAccess access = (MobEntityAccess) mob;
-        if (!access.showMobRpgLabel()) {
-            return;
-        }
         Component original = cir.getReturnValue();
         if (original == null) {
-            return;
+            original = mob.getType().getDescription();
         }
         Component levelText = Component.translatable("text.nameplate.level", access.getMobRpgLevel());
         cir.setReturnValue(levelText.copy().append(" ").append(original));
+    }
+
+    private static Mob eligibleMob(Entity entity) {
+        if (!NameplateMain.CONFIG.showLevel) {
+            return null;
+        }
+        if (!(entity instanceof Mob mob) || mob.isVehicle()) {
+            return null;
+        }
+        MobEntityAccess access = (MobEntityAccess) mob;
+        if (!access.showMobRpgLabel()) {
+            return null;
+        }
+        return mob;
     }
 }
